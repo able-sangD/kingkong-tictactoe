@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>킹콩블럭 틱택토 게임</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#10b981}
+    html,body{height:100%;margin:0;font-family:system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans KR', 'Malgun Gothic', sans-serif;background:linear-gradient(180deg,var(--bg),#071022);color:#e6eef6}
+    .wrap{height:100%;display:grid;place-items:center;padding:16px;position:relative}
+    .board-wrap{display:flex;flex-direction:column;gap:14px;align-items:center}
+    h1{margin:0 0 6px 0;font-size:30px;font-weight:600}
+    .board{width:min(80vmin,580px);height:min(80vmin,580px);background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.02));display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:12px;padding:18px;border-radius:14px;box-shadow:0 8px 30px rgba(2,6,23,0.7)}
+    .cell{background:rgba(255,255,255,0.03);border-radius:10px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:pointer;user-select:none}
+    .cell img{max-width:78%;max-height:78%;opacity:0;transform:scale(0.85);transition:opacity .22s ease,transform .22s cubic-bezier(.2,.9,.3,1)}
+    .cell.filled img{opacity:1;transform:scale(1)}
+    .controls{display:flex;gap:12px;align-items:center;justify-content:center}
+    button{background:var(--card);color:inherit;border:1px solid rgba(255,255,255,0.04);padding:8px 12px;border-radius:10px;cursor:pointer}
+    .info{font-size:13px;opacity:0.9}
+    .turn{font-weight:700;color:var(--accent)}
+    #logo{position:absolute;top:12px;right:12px;height:48px}
+    /* 승리 팝업 스타일 */
+    #popup {
+      position:absolute;
+      top:50%;
+      left:50%;
+      transform:translate(-50%,-50%);
+      background:rgba(0,0,0,0.85);
+      color:#fff;
+      font-size:48px;
+      padding:40px 60px;
+      border-radius:20px;
+      text-align:center;
+      display:none;
+      z-index:100;
+      cursor:pointer;
+    }
+    @media(max-width:520px){.board{gap:8px;padding:10px;border-radius:10px}}
+    #logo {
+  position: absolute;
+  top: 2px;
+  right: 24px;
+  height: 160px; /* 높이 키우기 */
+  /* 필요하면 width도 지정 가능 */
+  /* width: auto; */
+}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <img id="logo" src="로고_바른에듀.png" alt="로고">
+    <div class="board-wrap">
+      <h1>킹콩 틱택토</h1>
+      <div class="board" id="board"></div>
+
+      <div class="controls">
+        <div class="info">턴: <span class="turn" id="turnTxt">X</span></div>
+        <button id="resetBtn">다시 시작</button>
+        <button id="swapBtn">순서 변환 (X/O)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 승리 팝업 -->
+  <div id="popup">승리!</div>
+
+  <script>
+    const boardEl = document.getElementById('board');
+    const turnTxt = document.getElementById('turnTxt');
+    const resetBtn = document.getElementById('resetBtn');
+    const swapBtn = document.getElementById('swapBtn');
+    const popup = document.getElementById('popup');
+
+    let modelFiles = { X: 'x.png', O: 'o.png' };
+
+    let board = Array(9).fill(null);
+    let turn = 'X';
+    let gameOver = false;
+
+    function createBoard(){
+      boardEl.innerHTML = '';
+      for (let i=0;i<9;i++){
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.index = i;
+        const img = document.createElement('img');
+        cell.appendChild(img);
+        boardEl.appendChild(cell);
+      }
+    }
+    createBoard();
+
+    boardEl.addEventListener('click', (ev)=>{
+      if (gameOver) return;
+      const cell = ev.target.closest('.cell');
+      if (!cell) return;
+      const i = Number(cell.dataset.index);
+      if (board[i]) return;
+
+      board[i] = turn;
+      const img = cell.querySelector('img');
+      img.src = modelFiles[board[i]];
+      img.onerror = ()=>{ img.style.display='none'; };
+      img.onload = ()=>{ cell.classList.add('filled'); };
+
+      const winner = checkWin();
+      if (winner){
+        gameOver = true;
+        showPopup(winner + ' 승리!');
+      } else if (board.every(Boolean)){
+        gameOver = true;
+        showPopup('무승부');
+      } else {
+        turn = turn === 'X' ? 'O' : 'X';
+        turnTxt.textContent = turn;
+      }
+    });
+
+    resetBtn.addEventListener('click', ()=> resetGame());
+    swapBtn.addEventListener('click', ()=>{
+      turn = (turn === 'X') ? 'O' : 'X';
+      resetGame(turn);
+      alert(`이제 ${turn}가 먼저 시작합니다.`);
+    });
+
+    function resetGame(start='X'){
+      board = Array(9).fill(null);
+      turn = start;
+      gameOver = false;
+      turnTxt.textContent = turn;
+      createBoard();
+      popup.style.display = 'none';
+    }
+
+    function checkWin(){
+      const wins = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+      ];
+      for (const [a,b,c] of wins){
+        if (board[a] && board[a] === board[b] && board[b] === board[c]) return board[a];
+      }
+      return null;
+    }
+
+    function highlightWin(symbol){
+      const wins = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+      ];
+      for (const [a,b,c] of wins){
+        if (board[a] && board[a] === board[b] && board[b] === board[c]){
+          [a,b,c].forEach(i=>{
+            const cell = boardEl.children[i];
+            cell.style.boxShadow = '0 8px 30px rgba(16,185,129,0.15) inset, 0 8px 24px rgba(16,185,129,0.08)';
+            cell.style.border = '2px solid rgba(16,185,129,0.18)';
+          });
+          break;
+        }
+      }
+    }
+
+    function showPopup(message){
+      popup.textContent = message;
+      popup.style.display = 'block';
+      highlightWin(message.includes('승리') ? message[0] : '');
+    }
+
+    // 팝업 클릭하면 다시 시작
+    popup.addEventListener('click', ()=> resetGame());
+  </script>
+</body>
+</html>
